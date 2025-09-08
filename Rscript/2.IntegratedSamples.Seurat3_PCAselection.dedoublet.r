@@ -11,6 +11,7 @@ library(ggplot2)
 library(optparse)
 library(dplyr)
 library(stringr)
+set.seed(2025)
 
 single_sample_dedoublet <- function(inputfile, sample_label, nFeature_RNA_upper_limit, percent.mt_upper_limit, save_path){
 	################# object ##################
@@ -19,7 +20,7 @@ single_sample_dedoublet <- function(inputfile, sample_label, nFeature_RNA_upper_
 	pbmc$sample_label <- sample_label
 	Idents(pbmc) <- sample_label
 	pbmc@project.name <- sample_label
-	pbmc@ meta.data$ orig.ident <- sample_label
+	pbmc@meta.data$orig.ident <- sample_label
 	# Screening cells (这之后细胞总个数不会再发生改变)
 	pbmc <- subset(pbmc, subset = nFeature_RNA > 200 & nFeature_RNA < nFeature_RNA_upper_limit & percent.mt < percent.mt_upper_limit)
 	# print(str_c("### The original barcodes of pbmc object:"))
@@ -31,18 +32,31 @@ single_sample_dedoublet <- function(inputfile, sample_label, nFeature_RNA_upper_
 	pbmc <- FindVariableFeatures(pbmc, selection.method = "vst", nfeatures = 2000)
 	# print("The pbmc object info: ")
     pbmc <- ScaleData(pbmc)
-    pbmc <- RunPCA(pbmc)
-    pbmc <- RunTSNE(pbmc, dims = 1:20)
+    pbmc <- RunPCA(pbmc, npcs = 30)
+    pbmc <- FindNeighbors(pbmc, dims = 1:30)
+    pbmc <- FindClusters(pbmc, resolution = 0.6)
+    pbmc <- RunTSNE(pbmc, dims = 1:30)
 
     multiplet_rate <- as.data.frame(rbind(c(0.004,800),c(0.008,1600),c(0.016,3200),c(0.023,4800),c(0.031,6400),c(0.039,8000),c(0.046,9600),c(0.054,11200),c(0.061,12800),c(0.069,14400),c(0.076,16000)))
     colnames(multiplet_rate) <- c('rate','cells')
 
     rate = multiplet_rate [(which(multiplet_rate$cells>ncol(pbmc))[1]-1), 'rate']
+    print(str_c(sample_label, ' --- : multiplet_rate : ', as.character(rate)))
 
     ## pK Identification (no ground-truth) ---------------------------------------------------------------------------------------
-    sweep.res.list_kidney <- paramSweep_v3(pbmc, PCs = 1:20, sct = FALSE)
+    sweep.res.list_kidney <- paramSweep_v3(pbmc, PCs = 1:30, sct = FALSE)
     sweep.stats_kidney <- summarizeSweep(sweep.res.list_kidney, GT = FALSE)
-    bcmvn_kidney <- find.pK(sweep.stats_kidney)
+    bcmvn <- find.pK(sweep.stats_kidney)
+    pk_plot = ggplot(bcmvn, aes(x= pK, y= BCmetric))+geom_point() + theme_bw()
+    ggsave(str_c(save_path, '/', sample_label,'.pk_plot.pdf'), pk_plot, width=12, height=4)
+    pK_bcmvn <- as.numeric(as.character(bcmvn$pK[which.max(bcmvn$BCmetric)]))
+    # In reference paper, PBMC shows poor DoubletFinder performance when pK > 0.1; 
+    # evaluate with clusters + doublet visualization.
+    if(pK_bcmvn > 0.15){
+        bcmvn <- head(bcmvn, 21)
+        pK_bcmvn <- as.numeric(as.character(bcmvn$pK[which.max(bcmvn$BCmetric)]))
+    }
+    print(str_c('注意pK_bcmvn:', pK_bcmvn))
 
     ## Homotypic Doublet Proportion Estimate -------------------------------------------------------------------------------------
     annotations <- pbmc@meta.data$seurat_clusters
@@ -51,16 +65,21 @@ single_sample_dedoublet <- function(inputfile, sample_label, nFeature_RNA_upper_
     nExp_poi.adj <- round(nExp_poi*(1-homotypic.prop))
 
     ## Run DoubletFinder with varying classification stringencies ----------------------------------------------------------------
-    pbmc <- doubletFinder_v3(pbmc, PCs = 1:20, pN = 0.25, pK = 0.09, nExp = nExp_poi, reuse.pANN = FALSE, sct = FALSE)
-	filer_DFname = colnames(pbmc@meta.data)[grep('DF', colnames(pbmc@meta.data))]
-    pbmc <- doubletFinder_v3(pbmc, PCs = 1:20, pN = 0.25, pK = 0.09, nExp = nExp_poi.adj, reuse.pANN = filer_DFname, sct = FALSE)
+    pbmc <- doubletFinder_v3(pbmc, PCs = 1:30, pN = 0.25, pK = pK_bcmvn, nExp = nExp_poi, reuse.pANN = FALSE, sct = FALSE)
+	filer_DFname = colnames(pbmc@meta.data)[grep('^pANN_', colnames(pbmc@meta.data))][1]
+    pbmc <- doubletFinder_v3(pbmc, PCs = 1:30, pN = 0.25, pK = pK_bcmvn, nExp = nExp_poi.adj, reuse.pANN = filer_DFname, sct = FALSE)
     name = colnames(pbmc@meta.data)[ncol(pbmc@meta.data)]
     p0 <- DimPlot(pbmc, reduction = "tsne", group.by = name, pt.size = 0.9)
+    print(table(pbmc@meta.data[grep('^DF', colnames(pbmc@meta.data))]))
+
+    p1 = DimPlot(pbmc, reduction = "tsne", group.by = 'seurat_clusters', label = TRUE, label.size = 2) + NoLegend() 
+    p2 = DimPlot(pbmc, reduction = "tsne", group.by = name, cols = c("#E64B35", "#999999"), label = TRUE, label.size = 2) + NoLegend()
+    g = plot_grid(p1,p2,ncol=2)
+    ggsave(str_c(save_path, '/', sample_label,'.doublet_cluster.pdf'), g, width=10, height=4)
 
     #通过小提琴图来展示结果
     p1 <- VlnPlot(pbmc, features = c("nCount_RNA"), group.by = name, log = T)
     p2 <- VlnPlot(pbmc, features = c("nFeature_RNA"), group.by = name, log = F)
-
     g <- plot_grid(p0,p1,p2,ncol=3,rel_widths=c(1.3,1,1))
     ggsave(str_c(save_path, '/', sample_label,'.doublet.pdf'), g, width=12, height=4)
 
@@ -119,7 +138,7 @@ merge.list <- lapply(X = merge.list, FUN = function(x) {
     x <- FindVariableFeatures(x, selection.method = "vst", nfeatures = 2000)
 })
 
-### update 230625
+### https://satijalab.org/seurat/archive/v4.3/integration_introduction
 # select features that are repeatedly variable across datasets for integration
 features <- SelectIntegrationFeatures(object.list = merge.list)
 # perform intergration
@@ -141,8 +160,11 @@ pdf(str_c(outputpath,"/","3.1.DimPlot.pdf"))
 DimPlot(immune.combined, reduction = "pca")
 dev.off()
 pdf(str_c(outputpath,"/","3.2.DimHeatmap.pdf"))
-DimHeatmap(immune.combined, dims = 1:20, cells = 500, balanced = TRUE)
+DimHeatmap(immune.combined, dims = 1:30, cells = 500, balanced = TRUE)
 dev.off()
 pdf(str_c(outputpath,"/","3.3.ElbowPlot.pdf"))
-ElbowPlot(immune.combined)
+ElbowPlot(immune.combined, ndims = 30)
 dev.off()
+
+
+sessionInfo()

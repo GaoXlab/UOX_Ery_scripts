@@ -36,15 +36,14 @@ ggsave(str_c('Results_',dtVar, '/Tsubset_DimPlot_clusters.',dtVar,'.check.pdf'),
 
 
 ### T细胞亚群细分
-Idents(immune.combined) <- immune.combined$celltype
 pbmc_T <- subset(immune.combined, idents=c('CD4 T cell'))#))
 DefaultAssay(pbmc_T) <- "integrated"
 # Run the standard workflow for visualization and clustering
 pbmc_T <- ScaleData(pbmc_T, verbose = FALSE)
 pbmc_T <- RunPCA(pbmc_T, npcs = 30, verbose = FALSE)
-pbmc_T <- RunTSNE(pbmc_T, reduction = "pca", dims = 1:30)
 pbmc_T <- FindNeighbors(pbmc_T, reduction = "pca", dims = 1:30)
 pbmc_T <- FindClusters(pbmc_T, resolution = 0.6)
+pbmc_T <- RunTSNE(pbmc_T, reduction = "pca", dims = 1:30, seed.use = 26)
 p2 <- DimPlot(pbmc_T, reduction = "tsne", label = TRUE, repel = TRUE) + theme_bw()
 ggsave(str_c('Results_',dtVar, '/Tsubset_DimPlot_clusters.',dtVar,'.pdf'), p2, width=5.5, height=4.5)
 
@@ -57,12 +56,14 @@ ggsave(str_c('Results_',dtVar, '/Tsubset_DimPlot_samples.',dtVar,'.pdf'), p1, wi
 
 
 DefaultAssay(pbmc_T) <- "RNA"
-Idents(pbmc_T) <- factor(pbmc_T$seurat_clusters, levels=c(3,9,5,4,2,0,1,8,6,7))
+Idents(pbmc_T) = 'seurat_clusters'
+Idents(pbmc_T) <- factor(pbmc_T$seurat_clusters, 
+                        levels=c("0","1","2","7","3","8","5","4","9","6"))
       markers <- c('Cd3e','Cd4','Cd8a','Cd44','Foxp3','Il2ra','Ctla4','Ikzf2',
                         'Lag3','Icos','Tnfrsf4','Tnfrsf9','Tnfrsf18','Klrg1','Il10','Gzmb',
                         'Sell','Tcf7','Bcl2','Il7r','Il6ra','Ccr6','Cd24a','Cd69','Xcl1','Nr4a1')
       markers = intersect(markers, rownames(pbmc_T))
-p1 <- DotPlot(pbmc_T, features = markers, dot.scale = 3, col.min=-0.5, cols=c('white','red','red4')) + RotatedAxis() +theme_bw()+theme(axis.text.x=element_text(angle = 90,  hjust = 1, vjust = .5))
+p1 <- DotPlot(pbmc_T, features = markers, dot.scale = 3, col.min=-1, cols=c('white','red','red4')) + RotatedAxis() +theme_bw()+theme(axis.text.x=element_text(angle = 90,  hjust = 1, vjust = .5))
 ggsave(str_c('Results_',dtVar, '/Tsubset.DotPlot_clusters.',dtVar,'.pdf'), p1, width=7, height=4)
 ## conserved markers
 # for (i in names(table(pbmc_T$seurat_clusters))) {
@@ -72,25 +73,24 @@ ggsave(str_c('Results_',dtVar, '/Tsubset.DotPlot_clusters.',dtVar,'.pdf'), p1, w
 
 table(pbmc_T$seurat_clusters)
 pbmc_T$celltype = dplyr::case_when(
-  pbmc_T$seurat_clusters %in% c(3,9) ~ "CD4 Tem",
-  pbmc_T$seurat_clusters %in% c(5) ~ "Effector Treg",
-  pbmc_T$seurat_clusters %in% c(4) ~ "Central Treg",
-  pbmc_T$seurat_clusters %in% c(0,1,2,8) ~ "CD4 Naive",
-  pbmc_T$seurat_clusters %in% c(6) ~ "Activated CD4 T",
-  pbmc_T$seurat_clusters %in% c(7) ~ "Unknown")
+  pbmc_T$seurat_clusters %in% c("3","8") ~ "CD4 Tem",
+  pbmc_T$seurat_clusters %in% c("5") ~ "Effector Treg",
+  pbmc_T$seurat_clusters %in% c("4","9") ~ "Central Treg",
+  pbmc_T$seurat_clusters %in% c("0","1","2","7") ~ "CD4 Naive",
+  pbmc_T$seurat_clusters %in% c("6") ~ "Activated CD4 T")
 table(pbmc_T$celltype)
 
-marjor_cluster <- c("CD4 Naive","CD4 Tem","Effector Treg","Central Treg","Activated CD4 T", "Unknown")
+marjor_cluster <- c("CD4 Naive","CD4 Tem","Effector Treg","Central Treg","Activated CD4 T")
 pbmc_T$celltype <- factor(pbmc_T$celltype, levels = marjor_cluster)
 
 Idents(pbmc_T) = 'celltype'
-p1 <- DimPlot(pbmc_T, reduction = "tsne", label = FALSE, label.size = 4, repel=TRUE, cols=c(pal_nejm(alpha = 0.4)(8), '#7E6148E5', '#B09C85E5','grey'))+theme_bw() +
+p1 <- DimPlot(pbmc_T, reduction = "tsne", label = TRUE, label.size = 4, repel=TRUE, cols=c(pal_nejm(alpha = 0.4)(8), '#7E6148E5', '#B09C85E5','grey'))+theme_bw() +
       theme(legend.position="right") + ggplot2::theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
 ggsave(str_c('Results_',dtVar, '/Tsubset_Anno1_SeuratClusters.',dtVar,'.pdf'), p1, width=4.8, height=3)
 p1 <- DimPlot(pbmc_T, reduction = "tsne", label = FALSE, label.size = 4, repel=FALSE, cols=c(pal_nejm(alpha = 0.3)(8), '#7E6148E5', '#B09C85E5','grey'))+theme_bw() +
       theme(legend.position="bottom", axis.text=element_blank())+ NoLegend()+ylab('')+xlab('')
 ggsave(str_c('Results_',dtVar, '/Tsubset_Anno1_SeuratClusters.',dtVar,'.no.pdf'), p1, width=3, height=3)
-p1 <- DotPlot(pbmc_T, features = markers, dot.scale = 3, col.min=-0.5, cols=c('white','red','red4')) + RotatedAxis() +
+p1 <- DotPlot(pbmc_T, features = markers, dot.scale = 3, cols=c('white','red','red4')) + RotatedAxis() +
       theme_bw()+theme(axis.text.x=element_text(angle = 90,  hjust = 1, vjust = .5))+ ylab('Cell type')
 ggsave(str_c('Results_',dtVar, '/Tsubset.DotPlot_celltype.',dtVar,'.pdf'), p1, width=7, height=3.8)
 
@@ -101,6 +101,7 @@ saveRDS(pbmc_T, file = str_c(workpath,"/",file_name,"_t-SNE_30PCA_0.6Resolution/
 
 
 markers.to.plot = c("Foxp3",'Ctla4','Ikzf2','Icos','Klrg1','Lag3','Ccl5','Gimap7','Pglyrp1','Gimap3','Pdcd1','Cd200r1')#,'Il10','Fgl2','Mmp9','Il10','Cxcr3','Capg','Gzmb','Ikzf2')
+markers.to.plot = c('Pdcd1','Cd200r1','Ccl5','Klrg1','Ikzf2','Gimap7', "Tbx21","Prdm1","Gzmb","Tnfrsf18","Tnfrsf4")#,'Il10','Fgl2','Mmp9','Il10','Cxcr3','Capg','Gzmb','Ikzf2')
 pbmc_effetcorTreg = subset(pbmc_T, idents=c("Effector Treg"))
 pbmc_effetcorTreg$sample_label = factor(pbmc_effetcorTreg$sample_label, levels=c('G1','G2','G3','G4'))
 Idents(pbmc_effetcorTreg) = "sample_label"
@@ -143,7 +144,7 @@ sample_groups_new = colnames(Tsubset)
 total_cells = apply(total_cell,2,sum)
 
 chisq_T_result3 = calculate_roe(total_T_clusters, Tsubset, total_T_cells, total_t_cells, sample_groups_new)
-labels = c("c_ur", "c_urctx", "c_ctx",  "ctx_ur", "ctx_urctx", "ur_urctx")
+labels = c('g1_g2','g1_g3','g1_g4','g2_g3','g2_g4','g3_g4')
 chisq_T_result3_sym = add_symnum_label(chisq_T_result3, labels); colnames(chisq_T_result3_sym) = gsub('CellNum','real_vs_expected',colnames(chisq_T_result3_sym))
 chisq_T_result3_melt = melt(chisq_T_result3[,c('cl', colnames(chisq_T_result3)[2:5])])
 

@@ -33,13 +33,21 @@ done
 
 
 ### 3.doublets filter and combined samples
-sample_names="G1,G2,G4,G3"
-rds_files="G1_raw.rds,G2_raw.rds,G4_raw.rds,G3_raw.rds"
+sample_names="G1,G2,G3,G4"
+rds_files="G1_raw.rds,G2_raw.rds,G3_raw.rds,G4_raw.rds"
 filter_fea="7000,7000,7500,7500"
 filter_mt="10,15,15,15"
+mkdir 3.combination.DeDoublets
 /usr/local/bin/Rscript ${R_script}/2.IntegratedSamples.Seurat3_PCAselection.dedoublet.r -w ./ -l $sample_names \
     -f $rds_files \
-    -u $filter_fea -m $filter_mt -o "3.combination.DeDoublets"  > qc_Doublet.output.txt 2>&1
+    -u $filter_fea -m $filter_mt -o "3.combination.DeDoublets"  > 3.combination.DeDoublets/qc_Doublet.output.txt 2>&1
 
 /usr/local/bin/Rscript ${R_script}/3.CCA_tSNEorUMAP.r -w ./3.combination.DeDoublets/ -p 30 \
     -f Origin_Integrated.rds -o combined > ./3.combination.DeDoublets/3.CCA_p30.log
+
+
+#### 4. annotation
+cd 4.anno
+/usr/local/bin/R CMD BATCH major_cluster.annotation.r
+
+/usr/local/bin/R CMD BATCH CD4T_Population.r

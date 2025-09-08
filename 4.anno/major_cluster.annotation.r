@@ -3,7 +3,6 @@ library(Seurat)
 library(stringr)
 library(cowplot)
 library(viridis)
-library(SingleR)
 library(scater)
 library(ExperimentHub)
 library(AnnotationHub)
@@ -37,7 +36,7 @@ Idents(immune.combined) = factor(Idents(immune.combined), levels = c('G1','G2','
 p1 <- DimPlot(immune.combined, reduction = "tsne", label = FALSE, pt.size = 0.01) + 
       ggplot2::scale_color_manual(values = c("#999999","#FFBE7A","#8ECFC9","#FE7C6D")) + 
       theme_bw() + ggplot2::theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
-ggsave(str_c('Results_',dtVar, '/Total.DimPlot_samples.',dtVar,'.pdf'), p1, width=5, height=3)
+ggsave(str_c('Results_',dtVar, '/Total.DimPlot_samples.',dtVar,'.pdf'), p1, width=4, height=3)
 
 
 Idents(immune.combined) <- "seurat_clusters"
@@ -46,9 +45,10 @@ p1 <- DimPlot(immune.combined, reduction = "tsne", label = TRUE, pt.size = 0.01)
 ggsave(str_c('Results_',dtVar, '/Total.DimPlot_clusters.',dtVar,'.pdf'), p1, width=4.5, height=3)
 
 
-Idents(immune.combined) <- factor(Idents(immune.combined), levels=c(12,1,3,17,5,0,11,6,19,2,4,8,16,9,21,13,7,10,20,18,14,15))
+Idents(immune.combined) <- factor(Idents(immune.combined), 
+                              levels=c("0","4","8","2","16","19","6","11","5","1","23","21","24","3","10","18","7","17","15","9","12","22","20","14","13"))
 marker <- c('Cd19','Cd79a','Cd3e','Cd4','Cd8a','Nkg7','Klrb1c','Ccr2','Ly6g','Fcgr3','Cxcr2','Arg2','Il1b','Lyz2','Cd14','Csf1r','Adgre1','Spic','Mrc1','Sirpa','Cd86',
-            'Itgax','Siglech','Bst2','Clec9a','Xcr1','Cst3','Fcer1g','Sdc1','Tnfrsf17','Kit','Cd34','Mpo','Gata1','Klf1','Epor','Tfrc','Hba-a1','Hbb-bt')
+            'Itgax','Siglech','Bst2','Clec9a','Xcr1','Fscn1','Cst3','Fcer1g','Sdc1','Prdm1','Xbp1','Tnfrsf17','Mki67','Top2a','Kit','Cd34','Mpo','Gata1','Klf1','Epor','Tfrc','Hba-a1','Hbb-bt')
 p1 <- DotPlot(immune.combined, features = unique(c(marker)), dot.scale = 3, col.min=-0.5, cols=c('white','red','red4')) + RotatedAxis() +
       theme_bw() + theme(axis.text.x=element_text(angle = 90,  hjust = 1, vjust = .5))
 ggsave(str_c('Results_',dtVar, '/Total.DotPlot_clusters.',dtVar,'.pdf'), p1, width=10, height=4)
@@ -56,17 +56,17 @@ ggsave(str_c('Results_',dtVar, '/Total.DotPlot_clusters.',dtVar,'.pdf'), p1, wid
 # table(immune.combined$seurat_clusters)
 table(immune.combined$seurat_clusters)
 immune.combined$celltype = dplyr::case_when(
-  immune.combined$seurat_clusters %in% c(12,1,3,17,5,0,11) ~ "B cell",
-  immune.combined$seurat_clusters %in% c(6,19,2) ~ "CD4 T cell",
-  immune.combined$seurat_clusters %in% c(4) ~ "CD8 T cell",
-  immune.combined$seurat_clusters %in% c(8,16) ~ "NK T cell",
-  immune.combined$seurat_clusters %in% c(9) ~ "NK cell",
-  immune.combined$seurat_clusters %in% c(13) ~ "MonoNeutro",
-  immune.combined$seurat_clusters %in% c(7) ~ "Macrophage",
-  immune.combined$seurat_clusters %in% c(10,20) ~ "DC",
-  immune.combined$seurat_clusters %in% c(18) ~ "Plasma cell",
-  immune.combined$seurat_clusters %in% c(14) ~ "Progenitor cell",
-  immune.combined$seurat_clusters %in% c(15) ~ "Erythrocyte")
+  immune.combined$seurat_clusters %in% c("6","0","4","8","2","16","11","19") ~ "B cell",
+  immune.combined$seurat_clusters %in% c("5","1","23") ~ "CD4 T cell",
+  immune.combined$seurat_clusters %in% c("21","24","3") ~ "CD8 T cell",
+  immune.combined$seurat_clusters %in% c("18", "10") ~ "NK T cell",
+  immune.combined$seurat_clusters %in% c("7") ~ "NK cell",
+  immune.combined$seurat_clusters %in% c("15","17") ~ "MonoNeutro",
+  immune.combined$seurat_clusters %in% c("9") ~ "Macrophage",
+  immune.combined$seurat_clusters %in% c("12","22") ~ "DC",
+  immune.combined$seurat_clusters %in% c("20") ~ "Plasma cell",
+  immune.combined$seurat_clusters %in% c("14") ~ "Progenitor cell",
+  immune.combined$seurat_clusters %in% c("13") ~ "Erythrocyte")
 table(immune.combined$celltype)
 
 marjor_cluster <- c('B cell','CD4 T cell','CD8 T cell','NK T cell','NK cell', 'MonoNeutro','Macrophage','DC',"Plasma cell", 'Progenitor cell', 'Erythrocyte')
@@ -83,7 +83,7 @@ p1 <- DimPlot(immune.combined, reduction = "tsne", label = FALSE, label.size = 4
             ggplot2::theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank())
 ggsave(str_c('Results_',dtVar, '/Total.Anno1_SeuratClusters.',dtVar,'.no.pdf'), p1, width=3, height=3)
 
-p1 <- DotPlot(immune.combined, features = unique(c(marker)), dot.scale = 3, col.min=-0.5, cols=c('white','red','red4')) + RotatedAxis() +
+p1 <- DotPlot(immune.combined, features = unique(setdiff(marker, c('Mki67','Top2a'))), dot.scale = 3, col.min=-0.5, cols=c('white','red','red4')) + RotatedAxis() +
       theme_bw()+theme(axis.text.x=element_text(angle = 90,  hjust = 1, vjust = .5)) + ylab('Cell type')
 ggsave(str_c('Results_',dtVar, '/Total.DotPlot_celltype.',dtVar,'.pdf'), p1, width=9, height=4)
 
@@ -155,7 +155,7 @@ total_cells = apply(total_cell, 2, sum); total = sum(total_cells)
 total_clusters = apply(total_cell, 1, sum)
 sample_groups_new = colnames(total_cell)
 chisq_total_result2 = calculate_roe(total_clusters, total_cell, total_cells, total, sample_groups_new)
-labels = c("c_ur", "c_urctx", "c_ctx",  "ctx_ur", "ctx_urctx", "ur_urctx")
+labels = c('g1_g2','g1_g3','g1_g4','g2_g3','g2_g4','g3_g4')
 
 chisq_total_result2_sym = add_symnum_label(chisq_total_result2, labels)
 colnames(chisq_total_result2_sym) = gsub('CellNum','real_vs_expected',colnames(chisq_total_result2_sym))
@@ -236,3 +236,6 @@ p3 <- DotPlot(subset(pbmc_mononeu, idents=c('G2','G3','G4')), features =immuno_i
       dot.scale = 3, , cols = c("blue", "red", "grey") ) + RotatedAxis() +theme_bw()+
       theme(axis.text.x=element_text(angle = 90,  hjust = 1, vjust = .5), legend.position='bottom', axis.title.y=element_blank())
 ggsave(str_c('Results_',dtVar, '/Mye_MonoNeu.3samples_selectedmarkers',dtVar,'.pdf'), p3, width=7, height=2.5)
+
+
+sessionInfo()
