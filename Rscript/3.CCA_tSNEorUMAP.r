@@ -51,7 +51,7 @@ immune.combined <- readRDS(str_c(inputfile))
 ####################################################################
 ###################### t-SNE and Clustering ########################
 ####################################################################
-resolution_test <- 0.6 #seq(0.4, 1.2, by = 0.2)
+resolution_test <- c(0.6) #seq(0.4, 1.2, by = 0.2)
 for(resolution in resolution_test){
 	# create the subdir for t-SNE
 	subworkpath <- str_c(output_prename, "_t-SNE_", pca, "PCA_", resolution, "Resolution/")
@@ -64,7 +64,7 @@ for(resolution in resolution_test){
 	print('--------------RunPCA--------------')
 	immune.combined <- RunPCA(immune.combined, npcs = pca, verbose = FALSE)
 	print('--------------RunTSNE--------------')
-	immune.combined <- RunTSNE(immune.combined, reduction = "pca", dims = 1:pca)
+	immune.combined <- RunTSNE(immune.combined, reduction = "pca", dims = 1:pca, seed.use = 59)
 	print('--------------FindNeighbors--------------')
 	immune.combined <- FindNeighbors(immune.combined, reduction = "pca", dims = 1:pca)
 	print('--------------FindClusters--------------')
@@ -86,8 +86,8 @@ for(resolution in resolution_test){
 		sample_label_cell_num <- c()
 		cellratio_in_sample_label <- c()
 		for(sample_label_i in sample_label_list){
-	    	sample_label_cell_num <- c(sample_label_cell_num, length(grep(str_c('^', sample_label_i, '_'), cellnum_in_cluster)))
-			cellratio_in_sample_label <- c(cellratio_in_sample_label, length(grep(str_c('^', sample_label_i, '_'), cellnum_in_cluster))/table(immune.combined$sample_label)[sample_label_i])
+	    	sample_label_cell_num <- c(sample_label_cell_num, length(grep(str_c('^', sample_label_i, '_[A-Z0-9]'), cellnum_in_cluster)))
+			cellratio_in_sample_label <- c(cellratio_in_sample_label, length(grep(str_c('^', sample_label_i, '_[A-Z0-9]'), cellnum_in_cluster))/table(immune.combined$sample_label)[sample_label_i])
 	    }
 		cellnumber <- rbind(cellnumber, sample_label_cell_num)
 		cellratio_in_sample <- rbind(cellratio_in_sample, cellratio_in_sample_label)

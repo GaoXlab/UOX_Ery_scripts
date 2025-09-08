@@ -24,8 +24,8 @@ cellnumber_summary <- function(rds, rds2, sample_labels, sample_groups, celltype
     	sample_label_cell_num <- c()
     	cellratio_in_sample_label <- c()
     	for(sample_label_i in sample_label_list){
-            sample_label_cell_num <- c(sample_label_cell_num, length(grep(str_c('^', sample_label_i, '_'), cellnum_in_cluster)))
-    		cellratio_in_sample_label <- c(cellratio_in_sample_label, length(grep(str_c('^', sample_label_i, '_'), cellnum_in_cluster))/table(rds2$sample_label)[sample_label_i])
+            sample_label_cell_num <- c(sample_label_cell_num, length(grep(str_c('^', sample_label_i, '_[A-Z0-9]'), cellnum_in_cluster)))
+    		cellratio_in_sample_label <- c(cellratio_in_sample_label, length(grep(str_c('^', sample_label_i, '_[A-Z0-9]'), cellnum_in_cluster))/table(rds2$sample_label)[sample_label_i])
       }
     	cellnumber <- rbind(cellnumber, sample_label_cell_num)
     	cellratio_in_sample <- rbind(cellratio_in_sample, cellratio_in_sample_label)
@@ -59,14 +59,14 @@ cellnumber_summary <- function(rds, rds2, sample_labels, sample_groups, celltype
     g <- plot_grid(p1, p2, p3, rel_widths=c(1,1,0.4), ncol=3)
     ggsave(str_c("./", name, "cellsratio_InAnnotationClusters.barplot2.pdf"), g, width=16, height=5)
     # colors=c('grey','#4c85bb','red','#FB6A4A')
-    df3_trans[is.na(df3_trans$sd), 'sd'] = 0
-    p4 <- ggplot(df3_trans, aes(x=celltype, y=value100, fill=group)) + 
-      geom_bar(stat="identity", position=position_dodge()) +
-      geom_errorbar(aes(ymin=ifelse(value100-sd<0, 0 ,value100-sd ), ymax=value100+sd), width=.2, position=position_dodge(.9))+
-      scale_fill_manual(values=group_colors)+ theme(legend.position='bottom')+theme_classic()+theme(legend.position='right', axis.text.x = element_text(angle = 45,vjust = 1,hjust = 1))
-    # p4 <- ggplot(data=df3, aes(x=group, y=value100, fill=celltype)) + geom_bar(stat="identity")+theme_classic()+ylab('Percentage (%)')+
-    #       scale_fill_manual(values=colors) + theme(legend.position='right')
-    ggsave(str_c("./", name, "cellsratio_InAnnotationClusters.barplot3.pdf"), p4, width=10, height=4)
+    # df3_trans[is.na(df3_trans$sd), 'sd'] = 0
+    # p4 <- ggplot(df3_trans, aes(x=celltype, y=value100, fill=group)) + 
+    #   geom_bar(stat="identity", position=position_dodge()) +
+    #   geom_errorbar(aes(ymin=ifelse(value100-sd<0, 0 ,value100-sd ), ymax=value100+sd), width=.2, position=position_dodge(.9))+
+    #   scale_fill_manual(values=group_colors)+ theme(legend.position='bottom')+theme_classic()+theme(legend.position='right', axis.text.x = element_text(angle = 45,vjust = 1,hjust = 1))
+    # # p4 <- ggplot(data=df3, aes(x=group, y=value100, fill=celltype)) + geom_bar(stat="identity")+theme_classic()+ylab('Percentage (%)')+
+    # #       scale_fill_manual(values=colors) + theme(legend.position='right')
+    # ggsave(str_c("./", name, "cellsratio_InAnnotationClusters.barplot3.pdf"), p4, width=10, height=4)
 }
 
 
@@ -94,17 +94,17 @@ calculate_roe <- function(calculate_df, subset, total_cells, total, group_name){
         # c1k = as.data.frame(rbind(subset[cl, c(group_name[1],group_name[2])],  round(expected_tmp_cells[cl, c(group_name[1],group_name[2])],0))); 
         # c1r = as.data.frame(rbind(subset[cl, c(group_name[1],group_name[3])],  round(expected_tmp_cells[cl, c(group_name[1],group_name[3])],0))); 
         # kr = as.data.frame(rbind(subset[cl, c(group_name[2],group_name[3])],  round(expected_tmp_cells[cl, c(group_name[2],group_name[3])],0))); 
-        c_ur = as.data.frame(rbind(subset[cl, c("G1","G2")],  round(expected_tmp_cells[cl, c("G1","G2")],0))); 
-        c_urctx = as.data.frame(rbind(subset[cl, c("G1","G4")],  round(expected_tmp_cells[cl, c("G1","G4")],0))); 
-        c_ctx = as.data.frame(rbind(subset[cl, c("G1","G3")],  round(expected_tmp_cells[cl, c("G1","G3")],0))); 
-        ctx_ur = as.data.frame(rbind(subset[cl, c("G3","G2")],  round(expected_tmp_cells[cl, c("G3","G2")],0))); 
-        ctx_urctx = as.data.frame(rbind(subset[cl, c("G3","G4")],  round(expected_tmp_cells[cl, c("G3","G4")],0))); 
-        ur_urctx = as.data.frame(rbind(subset[cl, c("G2","G4")],  round(expected_tmp_cells[cl, c("G2","G4")],0))); 
-        chisq_tmp_result = rbind(chisq_tmp_result, c(chisq.test(c_ur)$p.value, chisq.test(c_urctx)$p.value, chisq.test(c_ctx)$p.value,
-                                                     chisq.test(ctx_ur)$p.value, chisq.test(ctx_urctx)$p.value, chisq.test(ur_urctx)$p.value))
+        g1_g2 = as.data.frame(rbind(subset[cl, c("G1","G2")],  round(expected_tmp_cells[cl, c("G1","G2")],0))); 
+        g1_g3 = as.data.frame(rbind(subset[cl, c("G1","G3")],  round(expected_tmp_cells[cl, c("G1","G3")],0))); 
+        g1_g4 = as.data.frame(rbind(subset[cl, c("G1","G4")],  round(expected_tmp_cells[cl, c("G1","G4")],0))); 
+        g2_g3 = as.data.frame(rbind(subset[cl, c("G2","G3")],  round(expected_tmp_cells[cl, c("G2","G3")],0))); 
+        g2_g4 = as.data.frame(rbind(subset[cl, c("G2","G4")],  round(expected_tmp_cells[cl, c("G2","G4")],0))); 
+        g3_g4 = as.data.frame(rbind(subset[cl, c("G3","G4")],  round(expected_tmp_cells[cl, c("G3","G4")],0))); 
+        chisq_tmp_result = rbind(chisq_tmp_result, c(chisq.test(g1_g2)$p.value, chisq.test(g1_g3)$p.value, chisq.test(g1_g4)$p.value,
+                                                     chisq.test(g2_g3)$p.value, chisq.test(g2_g4)$p.value, chisq.test(g3_g4)$p.value))
     }
     chisq_tmp_result = as.data.frame(round(chisq_tmp_result,6)); 
-    colnames(chisq_tmp_result) = c('c_ur','c_urctx','c_ctx', 'ctx_ur','ctx_urctx','ur_urctx')
+    colnames(chisq_tmp_result) = c('g1_g2','g1_g3','g1_g4','g2_g3','g2_g4','g3_g4')
     chisq_tmp_result$cl = names(calculate_df)
     Roe_tmp = merge(Roe_tmp, chisq_tmp_result, by='cl')
     return(Roe_tmp)
